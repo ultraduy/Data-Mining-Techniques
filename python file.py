@@ -20,9 +20,15 @@ print(data.describe())
 vY = data["What is your gender?"]
 mX = data[["What is your stress level (0-100)?", "Give a random number"]]
 
-mX = mX[pd.to_numeric(mX["Give a random number"], errors='coerce').notnull()]
-mX = mX[pd.to_numeric(mX["What is your stress level (0-100)?"], errors='coerce').notnull()]
+#mX = mX[pd.to_numeric(mX["Give a random number"], errors='coerce').notnull()]
+#mX = mX[pd.to_numeric(mX["What is your stress level (0-100)?"], errors='coerce').notnull()]
 
 #select integers
 mX = mX[check_integer(mX["Give a random number"])]
 mX = mX[check_integer(mX["What is your stress level (0-100)?"])]
+
+mX = mX.astype('float')
+mX = mX[mX["What is your stress level (0-100)?"]<=100]
+mX = mX[mX["What is your stress level (0-100)?"]>=0]
+
+mX = mX.astype('int')
