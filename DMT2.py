@@ -37,11 +37,11 @@ print(percentage)
 # 4. Top 2 Strongly Correlated Features
 # 5. What do you expect are the top 3 features that influence the response variable
 
-$Ans1 male and pclass
-$Ans2 fare and survived 
-$Ans3 Age and survived
-$Ans4 travel alone male vs fare survived 
-$Ans5 fare , male and pclass
+#Ans1 male and pclass
+#Ans2 fare and survived 
+#Ans3 Age and survived
+#Ans4 travel alone male vs fare survived 
+#Ans5 fare , male and pclass
 
 
 
