@@ -27,7 +27,7 @@ MSE = mean_squared_error(y_true,y_pred)
 print('MAE & MSE linear regression: ', (MAE, MSE))
 
 # In[] Logistic regression
-results = LogisticRegression(random_state=0).fit(X, y_true)
+results = LogisticRegression().fit(X, y_true)
 y_pred = results.predict(X)
 
 MAE = mean_absolute_error(y_true,y_pred)
