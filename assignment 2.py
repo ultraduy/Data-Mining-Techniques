@@ -13,10 +13,9 @@ sns.set(style="whitegrid", color_codes=True)
 
 # %%
 train = pd.read_csv("training_set_VU_DM.csv")
-
+train['prop_review_score'] = train['prop_review_score'].fillna(0)
 # %%
 train.shape
-#9917530 rows × 54 columns
 
 # %%
 train.dtypes
@@ -29,79 +28,41 @@ train.describe()
 print(train.isnull().sum())
 
 # %%
-train=train.dropna(axis=1,how="any")
+train = train.dropna(axis="columns")
 print(train.isnull().sum())
 
-# %%
-train.shape
+train = train.dropna(axis=0)
+print(train.isnull().sum())
+y_train = train["booking_bool"]
+X_train = train.drop(["click_bool","position","date_time","booking_bool"],
+                     axis=1,
+                     inplace=False)
+
+
 
 # %%
-for col in train.columns:
-    pct_missing = np.mean(train[col].isnull())
-    print('{} - {}%'.format(col,round(pct_missing*100)))
 
-# %%
-train.plot(x='date_time', y = 'price_usd', figsize = (20,5))
-plt.xlabel('Date time')
-plt.ylabel('Price in USD')
-plt.title('Time Series of room price by date time of search')
-
-# %%
-import seaborn as sns
-df = train.corr()
-print(df)
-
-train=train[['prop_starrating', 'prop_brand_bool', 'prop_location_score1',
-       'prop_log_historical_price', 'price_usd', 'promotion_flag',
-       'srch_length_of_stay', 'srch_booking_window', 'srch_adults_count',
-       'srch_children_count', 'srch_room_count', 'srch_saturday_night_bool',
-       'random_bool']]
-
-from sklearn.cluster import KMeans
-data = train
-n_cluster = range(1, 20)
-
-kmeans = [KMeans(n_clusters = i).fit(data) for i in n_cluster]
-scores = [kmeans[i].score(data) for i in range(len(kmeans))]
-
-fig, ax = plt.subplots(figsize = (16, 8))
-ax.plot(n_cluster, scores, color = 'orange')
-
-plt.xlabel('clusters num')
-plt.ylabel('score')
-plt.title('Elbow curve for K-Means')
-plt.show();
-
-km = KMeans(n_clusters = 8)
-kmean=km.fit(train)
-
-y_kmeans = km.predict(train)
-
-from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
-fig = plt.figure(1, figsize = (7, 7))
-
-ax = Axes3D(fig, rect = [0, 0, 0.95, 1], 
-            elev = 48, azim = 134)
-
-ax.scatter(train.iloc[:, 4:5],
-           train.iloc[:, 7:8], 
-           train.iloc[:, 11:12],
-           c = km.labels_.astype(np.float), edgecolor = 'm')
-
-ax.set_xlabel('USD')
-ax.set_ylabel('srch_booking_window')
-ax.set_zlabel('srch_saturday_night_bool')
-
-plt.title('K Means', fontsize = 10)
-# %%
 def optimal_recommendations(model, test_data):
     result = pd.DataFrame(columns=["srch_id","prop_id","scores"])
     df_list = []
-    grouped_data = data.groupby("srch_id")
+    grouped_data = test_data.groupby("srch_id")
     for group_name, group in tqdm(grouped_data):
-        scores = model.predict(group.loc[:, ~group.columns.isin(["srch_id"])])
+        mX = group.loc[:, ~group.columns.isin(["srch_id"])]
+        mX = mX.drop("prop_id", axis=1, inplace=False)
+        scores = model.predict_proba(mX)
+        scores = scores[:,1]
         sorted_group = sort_properties(group_name, scores, group["prop_id"])
+        df_list.append(sorted_group)
+    result = pd.concat(df_list)
+    return result
+
+def byUserReview(test_data):
+    result = pd.DataFrame(columns=["srch_id","prop_id","scores"])
+    df_list = []
+    grouped_data = test_data.groupby("srch_id")
+    for group_name, group in tqdm(grouped_data):
+        scores = group['prop_review_score']
+        sorted_group = sort_properties(group_name, scores.values, group["prop_id"])
         df_list.append(sorted_group)
     result = pd.concat(df_list)
     return result
@@ -113,4 +74,29 @@ def sort_properties(srch_id, scores, prop_id):
     sorted_group["scores"] = scores
     sorted_group = sorted_group.sort_values(by= "scores", ascending=False)
     return sorted_group
-    
+# %% ordering by review
+# train_review = train[['srch_id', 'prop_id', 'prop_review_score']]
+# test = pd.read_csv("test_set_VU_DM.csv")
+# print(test.isnull().sum())
+# test_review = test[['srch_id', 'prop_id', 'prop_review_score']]
+# result = byUserReview(test_review)
+
+# final = result[['srch_id', 'prop_id']]
+# final.to_csv('ByReview.csv', index=False))
+# %%
+test = pd.read_csv("test_set_VU_DM.csv")
+
+test = test[X_train.columns]
+test['prop_review_score'] = test['prop_review_score'].fillna(0)
+print(test.isnull().sum())
+
+
+lr = LogisticRegression()
+lr.fit(X_train.drop(["srch_id", "prop_id"], axis=1, inplace=False), y_train)
+
+#y_pred_lr = lr.predict_proba(X_test.head(100))
+#scores = y_pred_lr[:,1]
+
+result = optimal_recommendations(lr, test)
+final = result[['srch_id', 'prop_id']]
+final.to_csv('logistic.csv', index=False)
