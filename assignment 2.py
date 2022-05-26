@@ -7,22 +7,17 @@ import matplotlib.pyplot as plt
 plt.rc("font", size=14)
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 import seaborn as sns
+
 sns.set(style="white")
 sns.set(style="whitegrid", color_codes=True)
 
 # %%
 train = pd.read_csv("training_set_VU_DM.csv")
 train['prop_review_score'] = train['prop_review_score'].fillna(0)
-# %%
-train.shape
-
-# %%
-train.dtypes
-
-# %%
-train.describe()
-
+train['prop_location_score2'] = train['prop_location_score2'].fillna(train['prop_location_score2'].mean())
+train['orig_destination_distance'] = train['orig_destination_distance'].fillna(train['orig_destination_distance'].median())
 # %%
 # count of null values in each column
 print(train.isnull().sum())
@@ -85,11 +80,12 @@ def sort_properties(srch_id, scores, prop_id):
 # final.to_csv('ByReview.csv', index=False))
 # %%
 test = pd.read_csv("test_set_VU_DM.csv")
-
 test = test[X_train.columns]
 test['prop_review_score'] = test['prop_review_score'].fillna(0)
+test['prop_location_score2'] = test['prop_location_score2'].fillna(test['prop_location_score2'].mean())
+test['orig_destination_distance'] = test['orig_destination_distance'].fillna(test['orig_destination_distance'].median())
 print(test.isnull().sum())
-
+# %%
 
 lr = LogisticRegression()
 lr.fit(X_train.drop(["srch_id", "prop_id"], axis=1, inplace=False), y_train)
@@ -100,3 +96,11 @@ lr.fit(X_train.drop(["srch_id", "prop_id"], axis=1, inplace=False), y_train)
 result = optimal_recommendations(lr, test)
 final = result[['srch_id', 'prop_id']]
 final.to_csv('logistic.csv', index=False)
+
+# # %%
+# xgb = XGBClassifier(booster = 'gbtree', learning_rate = 0.1, max_depth = 5, n_estimators = 180)
+# xgb.fit(X_train.drop(["srch_id", "prop_id"], axis=1, inplace=False), y_train)
+    
+# result = optimal_recommendations(xgb, test)
+# final = result[['srch_id', 'prop_id']]
+# final.to_csv('XgBoost.csv', index=False)
